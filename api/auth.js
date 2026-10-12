@@ -1,4 +1,4 @@
-import {ADMIN_EMAIL,astraConfig,checkPassword,clearCookie,cookie,findOne,hashPassword,insertOne,json,methodPost,session,sign,updateOne} from './_lib.js';
+import {ADMIN_EMAIL,astraConfig,checkPassword,clearCookie,cookie,findOne,hashPassword,insertOne,json,methodPost,session,sign,updateOne} from '../lib/server.js';
 export default async function handler(req,res){
 if(!methodPost(req,res))return;
 const {action,email,password,name}=req.body||{};
