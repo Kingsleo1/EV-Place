@@ -21,6 +21,7 @@ Set these in **Vercel → Project → Settings → Environment Variables** for t
 - `ASTRA_DB_API_ENDPOINT`: HTTPS Astra Data API endpoint.
 - `ASTRA_DB_APPLICATION_TOKEN`: Astra application token with minimum required permissions.
 - `ASTRA_DB_KEYSPACE`: existing keyspace, e.g. `evplace`.
+- `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `APP_BASE_URL`: required for one-hour, single-use password reset emails. Configure a verified sender in Resend.
 
 Redeploy Vercel after setting environment variables so serverless functions receive them.
 
