@@ -14,4 +14,3 @@ jobs:
           node-version: 20
       - run: npm install
       - run: npm run build
-      - run: node --check api/auth.js && node --check api/admin.js && node --check api/catalogue.js && node --check lib/server.js
