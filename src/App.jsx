@@ -1,5 +1,5 @@
 import {useEffect,useMemo,useState} from 'react';
-import {Activity,ArrowDownRight,ArrowRight,BatteryCharging,Check,ChevronDown,CircleHelp,ClipboardList,Cloud,Database,Download,Eye,EyeOff,Heart,LayoutDashboard,LogOut,Menu,Moon,Package,Plus,Search,Settings,ShieldCheck,ShoppingBag,Sun,Trash2,Users,Wallet, Wrench,X,Zap,CarFront,MessageCircle,RefreshCw,Save,LockKeyhole,Mail,ChartNoAxesCombined,Upload,Boxes,Clock,AlertTriangle,ExternalLink,Server,KeyRound} from 'lucide-react';
+import {Activity,ArrowDownRight,ArrowRight,BatteryCharging,Gauge,Check,ChevronDown,CircleHelp,ClipboardList,Cloud,Database,Download,Eye,EyeOff,Heart,LayoutDashboard,LogOut,Menu,Moon,Package,Plus,Search,Settings,ShieldCheck,ShoppingBag,Sun,Trash2,Users,Wallet, Wrench,X,Zap,CarFront,MessageCircle,RefreshCw,Save,LockKeyhole,Mail,ChartNoAxesCombined,Upload,Boxes,Clock,AlertTriangle,ExternalLink,Server,KeyRound} from 'lucide-react';
 import './admin.css';
 const API=(path,body)=>fetch('/api/'+path,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(body||{})}).then(async r=>{const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'Request failed');return j});
 const WA='2348031175589';
