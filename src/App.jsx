@@ -4,7 +4,7 @@ import './admin.css';
 const API=(path,body)=>fetch('/api/'+path,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(body||{})}).then(async r=>{const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'Request failed');return j});
 const WA='2348031175589';
 const money=n=>'₦'+Number(n||0).toLocaleString('en-NG');
-const brands=['Tesla','BYD','Hyundai','Kia','MG','Rivian','Lucid','NIO','XPeng','Zeekr','Polestar','Volkswagen','BMW','Mercedes-Benz','Audi','Porsche','Volvo','Renault','Peugeot','Fiat','Nissan','Toyota','Honda','Chevrolet','Ford','Cadillac','GMC','Chery','Geely','Leapmotor','GAC Aion','VinFast','XPeng','Smart','Mini','Subaru','Mazda','Lexus','Genesis','Fisker','Lotus','AITO','Avatr','Seres','Wuling','Ora','Skywell','JAC','Dongfeng','Arcfox','BYD Yangwang','Denza'];
+const brands=['Tesla','BYD','Hyundai','Kia','MG','Rivian','Lucid','NIO','XPeng','Zeekr','Polestar','Volkswagen','BMW','Mercedes-Benz','Audi','Porsche','Volvo','Renault','Peugeot','Fiat','Nissan','Toyota','Honda','Chevrolet','Ford','Cadillac','GMC','Chery','Geely','Leapmotor','GAC Aion','VinFast','Deepal','Smart','Mini','Subaru','Mazda','Lexus','Genesis','Fisker','Lotus','AITO','Avatr','Seres','Wuling','Ora','Skywell','JAC','Dongfeng','Arcfox','BYD Yangwang','Denza'];
 const modelSet={
 Tesla:['Model 3 RWD','Model 3 Long Range','Model Y RWD','Model Y Long Range','Model S Plaid','Model X Long Range','Cybertruck AWD','Model 3 Performance'],
 BYD:['Dolphin Comfort','Atto 3 Extended Range','Seal Dynamic','Seal Performance','Han EV','Tang EV','Seagull','Song L EV'],
