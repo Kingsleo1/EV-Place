@@ -1,50 +1,27 @@
-import {astraCommand,astraConfig,json,methodPost,requireAdmin} from '../lib/server.js';
+import {astraCommand,astraConfig,json,methodPost,requireAdmin,updateOne} from '../lib/server.js';
 const collections=['products','orders','service_requests','users','admin_settings','audit_logs','password_resets'];
+const now=()=>new Date().toISOString();
+const safeDoc=d=>{const {_id,passwordHash,tokenHash,syncSource,syncedAt,...rest}=d;return {...rest,id:rest.id||_id}};
 async function replaceManagedDocuments(cfg,collection,docs){
-  // Only replace records owned by this storefront sync; leave other app records intact.
-  try{await astraCommand(cfg,{deleteMany:{collection,filter:{syncSource:'evplace-storefront'}}})}catch(e){if(!/collection|filter|delete/i.test(e.message))throw e}
-  for(let i=0;i<docs.length;i+=50){
-    const batch=docs.slice(i,i+50).map(d=>({...d,syncSource:'evplace-storefront',syncedAt:new Date().toISOString()}));
-    if(batch.length)await astraCommand(cfg,{insertMany:{collection,documents:batch,options:{ordered:false}}});
-  }
+ try{await astraCommand(cfg,{deleteMany:{collection,filter:{syncSource:'evplace-storefront'}}})}catch(e){if(!/collection|filter|delete/i.test(e.message))throw e}
+ for(let i=0;i<docs.length;i+=50){const batch=docs.slice(i,i+50).map(d=>({...d,_id:String(d.id||d._id),syncSource:'evplace-storefront',syncedAt:now()}));if(batch.length)await astraCommand(cfg,{insertMany:{collection,documents:batch,options:{ordered:false}}})}
 }
+async function audit(cfg,actor,action,details={}){const id='audit-'+Date.now()+'-'+Math.random().toString(36).slice(2,8);await astraCommand(cfg,{insertOne:{collection:'audit_logs',document:{_id:id,id,actor:actor.email,action,details,createdAt:now()}}})}
 export default async function handler(req,res){
-if(!methodPost(req,res))return;
-const actor=requireAdmin(req,res);if(!actor)return;
-const {action,astra,products=[],orders=[],services=[]}=req.body||{};
-try{
-if(action==='astra-test'){
-const cfg=astraConfig(astra||{});const result=await astraCommand(cfg,{find:{collection:(astra?.collection||'products'),options:{limit:1}}});
-return json(res,200,{ok:true,message:'Astra Data API responded successfully.',documentsFound:result.data?.documents?.length||0})
-}
-if(action==='astra-create-schema'){
-const cfg=astraConfig(astra||{});
-const results=[];
-for(const name of collections){try{await astraCommand(cfg,{createCollection:{name}});results.push({name,status:'created'})}catch(e){if(/already exists|exist/i.test(e.message))results.push({name,status:'already exists'});else throw new Error('Could not create collection "'+name+'": '+e.message)}}
-const auditId='schema-'+Date.now();await astraCommand(cfg,{insertOne:{collection:'audit_logs',document:{_id:auditId,id:auditId,actor:actor.email,action:'create-collections',createdAt:new Date().toISOString(),collections:results}}});
-return json(res,200,{ok:true,message:'Required Astra Data API collections are ready.',collections:results})
-}
-if(action==='astra-load'){
-const cfg=astraConfig(astra||{});
-const [p,o,s]=await Promise.all([
-astraCommand(cfg,{find:{collection:'products',filter:{syncSource:'evplace-storefront'},options:{limit:1000}}}),
-astraCommand(cfg,{find:{collection:'orders',filter:{syncSource:'evplace-storefront'},options:{limit:1000}}}),
-astraCommand(cfg,{find:{collection:'service_requests',filter:{syncSource:'evplace-storefront'},options:{limit:1000}}})
-]);
-const clean=arr=>(arr.data?.documents||[]).map(d=>{const {_id,syncSource,syncedAt,...rest}=d;return {...rest,id:rest.id||_id}});
-return json(res,200,{ok:true,products:clean(p),orders:clean(o),services:clean(s)})
-}
-if(action==='astra-sync'){
-const cfg=astraConfig(astra||{});
-const normalizedProducts=products.map(p=>({...p,_id:String(p.id),id:String(p.id)}));
-const normalizedOrders=orders.map(o=>({...o,_id:String(o.id),id:String(o.id)}));
-const normalizedServices=services.map(s=>({...s,_id:String(s.id),id:String(s.id)}));
-await replaceManagedDocuments(cfg,'products',normalizedProducts);
-await replaceManagedDocuments(cfg,'orders',normalizedOrders);
-await replaceManagedDocuments(cfg,'service_requests',normalizedServices);
-const auditId='sync-'+Date.now();await astraCommand(cfg,{insertOne:{collection:'audit_logs',document:{_id:auditId,id:auditId,actor:actor.email,action:'manual-storefront-sync',productCount:products.length,orderCount:orders.length,serviceCount:services.length,createdAt:new Date().toISOString()}}});
-return json(res,200,{ok:true,message:'Sync complete.',synced:products.length,orders:orders.length,services:services.length})
-}
-return json(res,400,{error:'Unsupported admin action.'})
-}catch(e){console.error('EV Place admin API error:',e.message);return json(res,500,{error:e.message||'Admin operation failed.'})}
+ if(!methodPost(req,res))return;
+ const actor=requireAdmin(req,res);if(!actor)return;
+ const body=req.body||{};const {action,astra}=body;
+ try{
+  const cfg=astraConfig(astra||{});
+  if(action==='astra-test'){const r=await astraCommand(cfg,{find:{collection:astra?.collection||'products',options:{limit:1}}});return json(res,200,{ok:true,message:'Astra Data API responded successfully.',documentsFound:r.data?.documents?.length||0})}
+  if(action==='astra-create-schema'){const results=[];for(const name of collections){try{await astraCommand(cfg,{createCollection:{name}});results.push({name,status:'created'})}catch(e){if(/already exists|exist/i.test(e.message))results.push({name,status:'already exists'});else throw new Error('Could not create collection "'+name+'": '+e.message)}}await audit(cfg,actor,'create-collections',{collections:results});return json(res,200,{ok:true,message:'Required Astra Data API collections are ready.',collections:results})}
+  if(action==='astra-load'){const [p,o,s,u]=await Promise.all([astraCommand(cfg,{find:{collection:'products',filter:{syncSource:'evplace-storefront'},options:{limit:1000}}}),astraCommand(cfg,{find:{collection:'orders',filter:{syncSource:'evplace-storefront'},options:{limit:1000}}}),astraCommand(cfg,{find:{collection:'service_requests',filter:{syncSource:'evplace-storefront'},options:{limit:1000}}}),astraCommand(cfg,{find:{collection:'users',options:{limit:1000}}})]);const clean=r=>(r.data?.documents||[]).map(safeDoc);return json(res,200,{ok:true,products:clean(p),orders:clean(o),services:clean(s),customers:clean(u)})}
+  if(action==='astra-sync'){const products=Array.isArray(body.products)?body.products:[],orders=Array.isArray(body.orders)?body.orders:[],services=Array.isArray(body.services)?body.services:[];await replaceManagedDocuments(cfg,'products',products);await replaceManagedDocuments(cfg,'orders',orders);await replaceManagedDocuments(cfg,'service_requests',services);await audit(cfg,actor,'manual-storefront-sync',{productCount:products.length,orderCount:orders.length,serviceCount:services.length});return json(res,200,{ok:true,message:'Sync complete.',synced:products.length,orders:orders.length,services:services.length})}
+  if(action==='product-save'){const p=body.product;if(!p?.id||!['vehicle','part','battery'].includes(p.type))return json(res,400,{error:'A valid product record is required.'});await updateOne(cfg,'products',{_id:String(p.id)},{$set:{...p,_id:String(p.id),syncSource:'evplace-storefront',updatedAt:now()}},true);await audit(cfg,actor,'product-save',{productId:p.id,type:p.type});return json(res,200,{ok:true,product:p})}
+  if(action==='product-archive'){const id=String(body.id||'');if(!id)return json(res,400,{error:'Product ID is required.'});await updateOne(cfg,'products',{_id:id},{$set:{status:'archived',syncSource:'evplace-storefront',updatedAt:now()}},false);await audit(cfg,actor,'product-archive',{productId:id});return json(res,200,{ok:true})}
+  if(action==='order-status'){const id=String(body.id||''),status=String(body.status||'');if(!id||!status)return json(res,400,{error:'Order ID and status are required.'});await updateOne(cfg,'orders',{_id:id},{$set:{status,syncSource:'evplace-storefront',updatedAt:now()}},false);await audit(cfg,actor,'order-status',{orderId:id,status});return json(res,200,{ok:true})}
+  if(action==='service-status'){const id=String(body.id||''),status=String(body.status||'');if(!id||!status)return json(res,400,{error:'Service request ID and status are required.'});await updateOne(cfg,'service_requests',{_id:id},{$set:{status,syncSource:'evplace-storefront',updatedAt:now()}},false);await audit(cfg,actor,'service-status',{serviceId:id,status});return json(res,200,{ok:true})}
+  if(action==='customers'){const r=await astraCommand(cfg,{find:{collection:'users',options:{limit:1000}}});return json(res,200,{ok:true,customers:(r.data?.documents||[]).map(safeDoc)})}
+  return json(res,400,{error:'Unsupported admin action.'})
+ }catch(e){console.error('EV Place admin API error:',e.message);return json(res,500,{error:e.message||'Admin operation failed.'})}
 }
