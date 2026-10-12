@@ -1,4 +1,4 @@
-import {astraCommand,astraConfig,json,methodPost,requireAdmin} from './_lib.js';
+import {astraCommand,astraConfig,json,methodPost,requireAdmin} from '../lib/server.js';
 const collections=['products','orders','service_requests','users','admin_settings','audit_logs'];
 async function replaceManagedDocuments(cfg,collection,docs){
   // Only replace records owned by this storefront sync; leave other app records intact.
