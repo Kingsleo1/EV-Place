@@ -1,11 +1,38 @@
-import {ADMIN_EMAIL,astraConfig,checkPassword,clearCookie,cookie,findOne,hashPassword,insertOne,json,methodPost,session,sign,updateOne} from '../lib/server.js';
+import {createHash,randomBytes} from 'node:crypto';
+import {ADMIN_EMAIL,astraCommand,astraConfig,checkPassword,clearCookie,cookie,findOne,hashPassword,insertOne,json,methodPost,session,sign,updateOne} from '../lib/server.js';
 export default async function handler(req,res){
 if(!methodPost(req,res))return;
 const {action,email,password,name}=req.body||{};
 try{
 if(action==='me'){const u=session(req);return json(res,200,{user:u?{id:u.sub,email:u.email,name:u.name,role:u.role}:null})}
 if(action==='logout'){clearCookie(res);return json(res,200,{ok:true})}
-if(action==='reset-request'){return json(res,200,{ok:true,message:'If the account exists, reset instructions can be sent once an email delivery provider is configured. No account details have been disclosed.'})}
+if(action==='reset-request'){
+const normalized=String(email||'').trim().toLowerCase();
+if(!normalized)return json(res,400,{error:'Enter your account email.'});
+const cfg=astraConfig();
+if(!process.env.RESEND_API_KEY||!process.env.RESEND_FROM_EMAIL||!process.env.APP_BASE_URL)return json(res,503,{error:'Password reset email is not configured yet. Add RESEND_API_KEY, RESEND_FROM_EMAIL and APP_BASE_URL in Vercel.'});
+let exists=normalized===ADMIN_EMAIL;
+if(!exists)exists=Boolean(await findOne(cfg,'users',{email:normalized}));
+if(exists){
+const token=randomBytes(32).toString('hex');const tokenHash=createHash('sha256').update(token).digest('hex');const now=Date.now();
+await insertOne(cfg,'password_resets',{_id:tokenHash,tokenHash,email:normalized,expiresAt:now+3600000,createdAt:new Date().toISOString()});
+const link=process.env.APP_BASE_URL.replace(/\/$/,'')+'/?reset_token='+encodeURIComponent(token);
+const response=await fetch('https://api.resend.com/emails',{method:'POST',headers:{'Authorization':'Bearer '+process.env.RESEND_API_KEY,'Content-Type':'application/json'},body:JSON.stringify({from:process.env.RESEND_FROM_EMAIL,to:[normalized],subject:'Reset your EV Place password',html:'<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#102017"><h2>Reset your EV Place password</h2><p>We received a request to reset your password. This link expires in one hour.</p><p><a href="'+link+'" style="display:inline-block;background:#27d879;color:#062114;padding:12px 18px;text-decoration:none;border-radius:5px;font-weight:bold">Reset password</a></p><p>If you did not request this, you can ignore this email.</p></div>'})});
+if(!response.ok)console.error('Password reset email provider returned',response.status);
+}
+return json(res,200,{ok:true,message:'If this email is registered, password reset instructions will be sent shortly.'})
+}
+if(action==='reset-password'){
+const token=String(req.body?.token||'');const newPassword=String(req.body?.newPassword||'');
+if(token.length<32||newPassword.length<12)return json(res,400,{error:'Use the valid reset link and a password of at least 12 characters.'});
+const cfg=astraConfig();const tokenHash=createHash('sha256').update(token).digest('hex');const record=await findOne(cfg,'password_resets',{tokenHash});
+if(!record||Number(record.expiresAt)<Date.now())return json(res,400,{error:'This reset link is invalid or has expired. Request a new one.'});
+const hashed=await hashPassword(newPassword);
+if(record.email===ADMIN_EMAIL){await updateOne(cfg,'admin_settings',{key:'admin_password_hash'},{$set:{key:'admin_password_hash',value:hashed,updatedAt:new Date().toISOString()}},true)}
+else{const account=await findOne(cfg,'users',{email:record.email});if(!account)return json(res,400,{error:'This account could not be reset. Request a new link.'});await updateOne(cfg,'users',{email:record.email},{$set:{passwordHash:hashed,updatedAt:new Date().toISOString()}},false)}
+await astraCommand(cfg,{deleteOne:{collection:'password_resets',filter:{tokenHash}}});
+return json(res,200,{ok:true,message:'Password reset successfully. Please sign in with your new password.'})
+}
 if(action==='change-password'){
 const u=session(req);if(!u)return json(res,401,{error:'Please sign in again.'});
 const {currentPassword,newPassword}=req.body||{};if(typeof newPassword!=='string'||newPassword.length<12)return json(res,400,{error:'Use a new password with at least 12 characters.'});
