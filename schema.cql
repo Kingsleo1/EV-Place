@@ -1,13 +1,10 @@
 -- EV Place Limited — Astra DB / Apache Cassandra logical schema
--- Run this only if you intend to use the CQL interface and have created the keyspace.
+-- Create the evplace keyspace in the Astra console first, then run this file in that keyspace.
 -- IMPORTANT: The current Vercel application uses Astra Data API collections (JSON API),
 -- not the CQL driver. Running this file does NOT create Data API collections.
 -- To use the current app, sign in as admin and use Settings > Database & sync > Create required tables
 -- (the button creates Astra Data API collections), or configure ASTRA_DB_* variables in Vercel.
 -- Keep password hashes and reset tokens private; never expose this database to browsers.
-
-CREATE KEYSPACE IF NOT EXISTS evplace
-WITH replication = {'class': 'NetworkTopologyStrategy', 'datacenter1': 1};
 
 USE evplace;
 
