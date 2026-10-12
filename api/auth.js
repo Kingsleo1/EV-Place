@@ -11,9 +11,11 @@ const u=session(req);if(!u)return json(res,401,{error:'Please sign in again.'});
 const {currentPassword,newPassword}=req.body||{};if(typeof newPassword!=='string'||newPassword.length<12)return json(res,400,{error:'Use a new password with at least 12 characters.'});
 if(u.role==='admin'){
 const stored=process.env.ADMIN_BOOTSTRAP_PASSWORD||'';
-let valid=stored?await checkPassword(currentPassword,await hashPassword(stored)):false;
+let valid=false;
 let cfg;try{cfg=astraConfig()}catch{}
-if(cfg){const doc=await findOne(cfg,'admin_settings',{key:'admin_password_hash'});if(doc?.value)valid=await checkPassword(currentPassword,doc.value)||valid}
+let savedHash=null;
+if(cfg){const doc=await findOne(cfg,'admin_settings',{key:'admin_password_hash'});savedHash=doc?.value||null}
+if(savedHash){valid=await checkPassword(currentPassword,savedHash)}else{const stored=process.env.ADMIN_BOOTSTRAP_PASSWORD;if(stored)valid=await checkPassword(currentPassword,await hashPassword(stored))}
 if(!valid)return json(res,400,{error:'Current password is incorrect. If this is the initial admin, configure ADMIN_BOOTSTRAP_PASSWORD in Vercel.'});
 if(!cfg)return json(res,503,{error:'Configure Astra DB server environment variables before changing the administrator password so the new hash can be persisted securely.'});
 const hashed=await hashPassword(newPassword);await updateOne(cfg,'admin_settings',{key:'admin_password_hash'},{$set:{key:'admin_password_hash',value:hashed,updatedAt:new Date().toISOString()}},true);
@@ -26,8 +28,8 @@ if(typeof email!=='string'||typeof password!=='string')return json(res,400,{erro
 const normalized=email.trim().toLowerCase();
 if(normalized===ADMIN_EMAIL){
 let cfg=null,storedHash=null;try{cfg=astraConfig();const doc=await findOne(cfg,'admin_settings',{key:'admin_password_hash'});storedHash=doc?.value||null}catch{}
-let valid=storedHash?await checkPassword(password,storedHash):false;
-if(!storedHash){const bootstrap=process.env.ADMIN_BOOTSTRAP_PASSWORD;if(bootstrap)valid=await checkPassword(password,await hashPassword(bootstrap))}
+let valid=false;
+if(storedHash){valid=await checkPassword(password,storedHash)}else{const bootstrap=process.env.ADMIN_BOOTSTRAP_PASSWORD;if(bootstrap)valid=await checkPassword(password,await hashPassword(bootstrap))}
 if(!valid)return json(res,401,{error:'Email or password is incorrect. Check the admin bootstrap password and Vercel environment settings.'});
 const user={sub:'admin-evplace',email:ADMIN_EMAIL,name:'EV Place Administrator',role:'admin'};cookie(res,sign(user));return json(res,200,{user})
 }
