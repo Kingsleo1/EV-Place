@@ -24,6 +24,16 @@ for(const name of collections){try{await astraCommand(cfg,{createCollection:{nam
 const auditId='schema-'+Date.now();await astraCommand(cfg,{insertOne:{collection:'audit_logs',document:{_id:auditId,id:auditId,actor:actor.email,action:'create-collections',createdAt:new Date().toISOString(),collections:results}}});
 return json(res,200,{ok:true,message:'Required Astra Data API collections are ready.',collections:results})
 }
+if(action==='astra-load'){
+const cfg=astraConfig(astra||{});
+const [p,o,s]=await Promise.all([
+astraCommand(cfg,{find:{collection:'products',filter:{syncSource:'evplace-storefront'},options:{limit:1000}}}),
+astraCommand(cfg,{find:{collection:'orders',filter:{syncSource:'evplace-storefront'},options:{limit:1000}}}),
+astraCommand(cfg,{find:{collection:'service_requests',filter:{syncSource:'evplace-storefront'},options:{limit:1000}}})
+]);
+const clean=arr=>(arr.data?.documents||[]).map(d=>{const {_id,syncSource,syncedAt,...rest}=d;return {...rest,id:rest.id||_id}});
+return json(res,200,{ok:true,products:clean(p),orders:clean(o),services:clean(s)})
+}
 if(action==='astra-sync'){
 const cfg=astraConfig(astra||{});
 const normalizedProducts=products.map(p=>({...p,_id:String(p.id),id:String(p.id)}));
