@@ -165,3 +165,10 @@ CREATE TABLE IF NOT EXISTS evplace.app_settings (
 -- User password hashes must only be stored in the protected server-side auth
 -- collection or a dedicated credential store. Never store plaintext passwords.
 -- Do not add default credentials or Astra tokens to CQL or source control.
+
+CREATE TABLE IF NOT EXISTS evplace.password_resets_by_token (
+  token_hash text PRIMARY KEY,
+  email text,
+  expires_at timestamp,
+  created_at timestamp
+);
