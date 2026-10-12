@@ -1,5 +1,5 @@
 import {astraCommand,astraConfig,json,methodPost,requireAdmin} from '../lib/server.js';
-const collections=['products','orders','service_requests','users','admin_settings','audit_logs'];
+const collections=['products','orders','service_requests','users','admin_settings','audit_logs','password_resets'];
 async function replaceManagedDocuments(cfg,collection,docs){
   // Only replace records owned by this storefront sync; leave other app records intact.
   try{await astraCommand(cfg,{deleteMany:{collection,filter:{syncSource:'evplace-storefront'}}})}catch(e){if(!/collection|filter|delete/i.test(e.message))throw e}
