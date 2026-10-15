@@ -34,3 +34,6 @@
 .product-detail-copy .fine-print{margin-top:16px;line-height:1.65}
 @media(max-width:800px){.product-detail-shell{width:min(100% - 32px,620px);padding-top:12px}.product-detail-grid{grid-template-columns:1fr;gap:24px}.product-detail-media{position:relative;top:auto;min-height:0;max-height:390px}.product-detail-media img{min-height:0;height:clamp(230px,64vw,390px)}.product-detail-copy{padding:0}.product-detail-type{margin-top:8px}.product-detail-actions{grid-template-columns:1fr}.product-detail-actions button{width:100%}}
 @media(max-width:430px){.product-detail-shell{width:calc(100% - 24px)}.product-detail-specs{gap:0 12px}.product-detail-info{padding:16px}.product-detail-actions{gap:10px}.product-detail-copy h1{font-size:2rem}}
+
+/* Official EV Place logo in the admin workspace */
+.admin-side-brand .brand{min-width:0}.admin-side-brand .brand-logo-image{width:136px;height:36px;object-fit:contain;object-position:left center}
