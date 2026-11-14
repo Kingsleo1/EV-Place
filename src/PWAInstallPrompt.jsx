@@ -23,12 +23,11 @@ export default function PWAInstallPrompt() {
 
   useEffect(() => {
     const updateVisibility = () => {
-      const isStorefront = Boolean(document.querySelector('.hero'));
       const isMobile = window.matchMedia?.('(max-width: 760px)').matches ?? true;
       const installed = isStandalone() || localStorage.getItem(INSTALLED_KEY) === 'yes';
       const dismissed = localStorage.getItem(DISMISSED_KEY) === 'yes';
       const alreadyShown = localStorage.getItem(SEEN_KEY) === 'yes';
-      const shouldShow = isStorefront && isMobile && !installed && !dismissed && !alreadyShown && (isAppleMobile() || Boolean(installEvent));
+      const shouldShow = isMobile && !installed && !dismissed && !alreadyShown && (isAppleMobile() || Boolean(installEvent));
       if (shouldShow) localStorage.setItem(SEEN_KEY, 'yes');
       setIos(isAppleMobile());
       setVisible(shouldShow);
@@ -46,15 +45,12 @@ export default function PWAInstallPrompt() {
 
     window.addEventListener('beforeinstallprompt', onBeforeInstall);
     window.addEventListener('appinstalled', onInstalled);
-    const observer = new MutationObserver(updateVisibility);
-    observer.observe(document.getElementById('root') || document.body, { childList: true, subtree: true });
     window.addEventListener('resize', updateVisibility);
     updateVisibility();
 
     return () => {
       window.removeEventListener('beforeinstallprompt', onBeforeInstall);
       window.removeEventListener('appinstalled', onInstalled);
-      observer.disconnect();
       window.removeEventListener('resize', updateVisibility);
     };
   }, [installEvent]);
