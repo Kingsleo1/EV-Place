@@ -4,6 +4,7 @@ import './pwa-install.css';
 
 const DISMISSED_KEY = 'ev-place-pwa-prompt-dismissed';
 const INSTALLED_KEY = 'ev-place-pwa-installed';
+const SEEN_KEY = 'ev-place-pwa-prompt-seen';
 
 function isStandalone() {
   return window.matchMedia?.('(display-mode: standalone)').matches ||
@@ -26,8 +27,11 @@ export default function PWAInstallPrompt() {
       const isMobile = window.matchMedia?.('(max-width: 760px)').matches ?? true;
       const installed = isStandalone() || localStorage.getItem(INSTALLED_KEY) === 'yes';
       const dismissed = localStorage.getItem(DISMISSED_KEY) === 'yes';
+      const alreadyShown = localStorage.getItem(SEEN_KEY) === 'yes';
+      const shouldShow = isStorefront && isMobile && !installed && !dismissed && !alreadyShown && (isAppleMobile() || Boolean(installEvent));
+      if (shouldShow) localStorage.setItem(SEEN_KEY, 'yes');
       setIos(isAppleMobile());
-      setVisible(isStorefront && isMobile && !installed && !dismissed && (isAppleMobile() || Boolean(installEvent)));
+      setVisible(shouldShow);
     };
 
     const onBeforeInstall = event => {
